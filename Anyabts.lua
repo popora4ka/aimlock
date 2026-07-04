@@ -16,7 +16,6 @@ local TargetPart = "Head"
 local TargetPlayer = nil
 local WallCheckEnabled = false
 local BindableButtonEnabled = false
-local TargetRole = "Murderer" -- "Murderer" or "Sheriff"
 
 -- Mobile button
 local ScreenGui = Instance.new("ScreenGui")
@@ -52,7 +51,7 @@ ToggleButton.MouseButton1Click:Connect(function()
     if AimLockEnabled then
         UIStroke.Color = Color3.fromRGB(0, 255, 0)
         if not IsLocalInLobby() then
-            TargetPlayer = FindTarget()
+            TargetPlayer = FindMurderer()
         end
     else
         UIStroke.Color = Color3.fromRGB(255, 255, 255)
@@ -61,10 +60,10 @@ ToggleButton.MouseButton1Click:Connect(function()
 end)
 
 -- Credits
-my_section:AddLabel("Credits: @Anya_bts")
+my_section:AddLabel("Credits: @your_name")
 
 -- Description
-my_section:AddParagraph("MM2 Aim Lock")
+my_section:AddParagraph("MM2 Aim Lock", "Aim lock for Innocent/Sheriff. Locks onto the Murderer only.")
 
 -- Toggle: Enable/Disable Aim Lock
 my_section:AddToggle("Enable Aim Lock", function(bool)
@@ -72,7 +71,7 @@ my_section:AddToggle("Enable Aim Lock", function(bool)
     if bool then
         UIStroke.Color = Color3.fromRGB(0, 255, 0)
         if not IsLocalInLobby() then
-            TargetPlayer = FindTarget()
+            TargetPlayer = FindMurderer()
         end
     else
         UIStroke.Color = Color3.fromRGB(255, 255, 255)
@@ -96,15 +95,6 @@ my_section:AddToggle("Wall Check", function(bool)
     end
 end)
 
--- Dropdown: Target Role (Murderer or Sheriff)
-local roleDropdown = my_section:AddDropdown("Target Role", {"Murderer", "Sheriff"}, function(selected)
-    TargetRole = selected
-    TargetPlayer = nil -- Reset target when switching role
-    if AimLockEnabled and not IsLocalInLobby() then
-        TargetPlayer = FindTarget()
-    end
-end)
-
 -- Dropdown: Head or Body
 local dropdown = my_section:AddDropdown("Target Part", {"Head", "Body"}, function(selected)
     TargetPart = selected
@@ -116,7 +106,7 @@ my_section:AddKeybind("Toggle Key", "T", function()
     if AimLockEnabled then
         UIStroke.Color = Color3.fromRGB(0, 255, 0)
         if not IsLocalInLobby() then
-            TargetPlayer = FindTarget()
+            TargetPlayer = FindMurderer()
         end
     else
         UIStroke.Color = Color3.fromRGB(255, 255, 255)
@@ -175,71 +165,35 @@ function IsTargetVisible(target)
     return true
 end
 
--- Check if player has knife (Murderer)
-function HasKnife(player)
-    if not player or not player.Character then return false end
-    
-    for _, item in ipairs(player.Character:GetChildren()) do
-        if item:IsA("Tool") and (item.Name:lower():find("knife") or item.Name:lower():find("нож")) then
-            return true
-        end
-    end
-    
-    local backpack = player:FindFirstChild("Backpack")
-    if backpack then
-        for _, item in ipairs(backpack:GetChildren()) do
-            if item:IsA("Tool") and (item.Name:lower():find("knife") or item.Name:lower():find("нож")) then
-                return true
-            end
-        end
-    end
-    
-    return false
-end
-
--- Check if player has gun (Sheriff)
-function HasGun(player)
-    if not player or not player.Character then return false end
-    
-    for _, item in ipairs(player.Character:GetChildren()) do
-        if item:IsA("Tool") and (item.Name:lower():find("gun") or item.Name:lower():find("пистолет") or item.Name:lower():find("револьвер") or item.Name:lower():find("revolver")) then
-            return true
-        end
-    end
-    
-    local backpack = player:FindFirstChild("Backpack")
-    if backpack then
-        for _, item in ipairs(backpack:GetChildren()) do
-            if item:IsA("Tool") and (item.Name:lower():find("gun") or item.Name:lower():find("пистолет") or item.Name:lower():find("револьвер") or item.Name:lower():find("revolver")) then
-                return true
-            end
-        end
-    end
-    
-    return false
-end
-
--- Find target based on TargetRole setting
-function FindTarget()
+-- Find the Murderer (player with knife)
+function FindMurderer()
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character then
             local humanoid = player.Character:FindFirstChild("Humanoid")
             if humanoid and humanoid.Health > 0 then
-                local isValidTarget = false
-                
-                if TargetRole == "Murderer" then
-                    isValidTarget = HasKnife(player)
-                elseif TargetRole == "Sheriff" then
-                    isValidTarget = HasGun(player)
-                end
-                
-                if isValidTarget then
-                    if WallCheckEnabled then
-                        if IsTargetVisible(player) then
+                for _, item in ipairs(player.Character:GetChildren()) do
+                    if item:IsA("Tool") and (item.Name:lower():find("knife") or item.Name:lower():find("нож")) then
+                        if WallCheckEnabled then
+                            if IsTargetVisible(player) then
+                                return player
+                            end
+                        else
                             return player
                         end
-                    else
-                        return player
+                    end
+                end
+                local backpack = player:FindFirstChild("Backpack")
+                if backpack then
+                    for _, item in ipairs(backpack:GetChildren()) do
+                        if item:IsA("Tool") and (item.Name:lower():find("knife") or item.Name:lower():find("нож")) then
+                            if WallCheckEnabled then
+                                if IsTargetVisible(player) then
+                                    return player
+                                end
+                            else
+                                return player
+                            end
+                        end
                     end
                 end
             end
@@ -263,19 +217,6 @@ function GetTargetPosition(player)
     return nil
 end
 
--- Validate if player matches target role
-function IsValidRole(player)
-    if not player or not player.Character then return false end
-    
-    if TargetRole == "Murderer" then
-        return HasKnife(player)
-    elseif TargetRole == "Sheriff" then
-        return HasGun(player)
-    end
-    
-    return false
-end
-
 -- Main loop
 RunService.RenderStepped:Connect(function()
     local inLobby = IsLocalInLobby()
@@ -296,7 +237,25 @@ RunService.RenderStepped:Connect(function()
     if TargetPlayer and TargetPlayer.Character then
         local hum = TargetPlayer.Character:FindFirstChild("Humanoid")
         if hum and hum.Health > 0 then
-            if IsValidRole(TargetPlayer) then
+            local hasKnife = false
+            for _, item in ipairs(TargetPlayer.Character:GetChildren()) do
+                if item:IsA("Tool") and (item.Name:lower():find("knife") or item.Name:lower():find("нож")) then
+                    hasKnife = true
+                    break
+                end
+            end
+            if not hasKnife then
+                local bp = TargetPlayer:FindFirstChild("Backpack")
+                if bp then
+                    for _, item in ipairs(bp:GetChildren()) do
+                        if item:IsA("Tool") and (item.Name:lower():find("knife") or item.Name:lower():find("нож")) then
+                            hasKnife = true
+                            break
+                        end
+                    end
+                end
+            end
+            if hasKnife then
                 if WallCheckEnabled then
                     if IsTargetVisible(TargetPlayer) then
                         validTarget = true
@@ -309,7 +268,7 @@ RunService.RenderStepped:Connect(function()
     end
     
     if not validTarget then
-        TargetPlayer = FindTarget()
+        TargetPlayer = FindMurderer()
     end
     
     if TargetPlayer then
@@ -325,4 +284,4 @@ LocalPlayer.CharacterAdded:Connect(function()
     TargetPlayer = nil
 end)
 
-print("MM2 Aim Lock loaded.")
+print("MM2 Aim Lock loaded. Round: Y 180-380. Wall Check & Bindable Button available.")
