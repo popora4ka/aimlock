@@ -1,6 +1,6 @@
 -- MM2 Murderer Aim Lock for Innocent/Sheriff
 local shared = odh_shared_plugins
-local my_section = shared.AddSection("MM2 Aim Lock")
+local my_section = shared.AddSection("anya_bts_AimLock")
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -25,7 +25,7 @@ local UICorner = Instance.new("UICorner")
 local UIStroke = Instance.new("UIStroke")
 
 ScreenGui.Parent = game.CoreGui
-ScreenGui.Name = "MM2AimLockGUI"
+ScreenGui.Name = "anya_bts_AimLockGUI"
 
 ToggleButton.Parent = ScreenGui
 ToggleButton.Size = UDim2.new(0, 70, 0, 70)
@@ -61,10 +61,10 @@ ToggleButton.MouseButton1Click:Connect(function()
 end)
 
 -- Credits
-my_section:AddLabel("Credits: @your_name")
+my_section:AddLabel("Credits: anya_bts")
 
 -- Description
-my_section:AddParagraph("MM2 Aim Lock", "Aim lock for Innocent. Locks onto Murderer or Sheriff.")
+my_section:AddParagraph("aim lock", "have ideas/bugs? ping me")
 
 -- Toggle: Enable/Disable Aim Lock
 my_section:AddToggle("Enable Aim Lock", function(bool)
@@ -80,10 +80,10 @@ my_section:AddToggle("Enable Aim Lock", function(bool)
     end
 end)
 
--- Toggle: Target Sheriff (вместо Dropdown)
-my_section:AddToggle("Target Sheriff", function(bool)
-    TargetSheriff = bool
-    TargetPlayer = nil
+-- Dropdown: Choose target role (Murderer or Sheriff)
+my_section:AddDropdown("Target Role", {"Murderer", "Sheriff"}, function(selected)
+    TargetSheriff = (selected == "Sheriff")
+    TargetPlayer = nil -- reset target when switching
     if AimLockEnabled and not IsLocalInLobby() then
         TargetPlayer = FindTarget()
     end
@@ -105,8 +105,8 @@ my_section:AddToggle("Wall Check", function(bool)
     end
 end)
 
--- Dropdown: Head or Body (этот Dropdown работает без ошибок)
-local partDropdown = my_section:AddDropdown("Target Part", {"Head", "Body"}, function(selected)
+-- Dropdown: Head or Body
+local dropdown = my_section:AddDropdown("Target Part", {"Head", "Body"}, function(selected)
     TargetPart = selected
 end)
 
@@ -124,44 +124,58 @@ my_section:AddKeybind("Toggle Key", "T", function()
     end
 end)
 
--- Проверка лобби (Y 180-380 = раунд)
+-- Check if local player is in lobby (Y 180-380 = round, else = lobby)
 function IsLocalInLobby()
     local character = LocalPlayer.Character
     if not character then return true end
+    
     local root = character:FindFirstChild("HumanoidRootPart")
     if not root then return true end
+    
     local y = root.Position.Y
-    if y >= 180 and y <= 380 then return false end
-    return true
+    
+    if y >= 180 and y <= 380 then
+        return false -- Round
+    end
+    
+    return true -- Lobby
 end
 
--- Wall Check
+-- Wall check: raycast from camera to target
 function IsTargetVisible(target)
     if not target or not target.Character then return false end
+    
     local targetPart = nil
     if TargetPart == "Head" then
         targetPart = target.Character:FindFirstChild("Head")
     elseif TargetPart == "Body" then
         targetPart = target.Character:FindFirstChild("HumanoidRootPart")
     end
+    
     if not targetPart then return false end
+    
     local cameraPos = Camera.CFrame.Position
     local targetPos = targetPart.Position
+    
     local raycastParams = RaycastParams.new()
     raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
     raycastParams.FilterDescendantsInstances = {LocalPlayer.Character}
+    
     local raycastResult = workspace:Raycast(cameraPos, (targetPos - cameraPos).Unit * (targetPos - cameraPos).Magnitude, raycastParams)
+    
     if raycastResult then
-        if raycastResult.Instance:IsDescendantOf(target.Character) then
+        local hitInstance = raycastResult.Instance
+        if hitInstance:IsDescendantOf(target.Character) then
             return true
         else
             return false
         end
     end
+    
     return true
 end
 
--- Вспомогательные проверки оружия
+-- Check if player has a knife (Murderer)
 local function HasKnife(player)
     if not player or not player.Character then return false end
     for _, item in ipairs(player.Character:GetChildren()) do
@@ -180,6 +194,7 @@ local function HasKnife(player)
     return false
 end
 
+-- Check if player has a gun (Sheriff)
 local function HasGun(player)
     if not player or not player.Character then return false end
     for _, item in ipairs(player.Character:GetChildren()) do
@@ -198,14 +213,16 @@ local function HasGun(player)
     return false
 end
 
--- Поиск цели
+-- Find the Murderer (player with knife)
 function FindMurderer()
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character then
             local humanoid = player.Character:FindFirstChild("Humanoid")
             if humanoid and humanoid.Health > 0 and HasKnife(player) then
                 if WallCheckEnabled then
-                    if IsTargetVisible(player) then return player end
+                    if IsTargetVisible(player) then
+                        return player
+                    end
                 else
                     return player
                 end
@@ -215,13 +232,16 @@ function FindMurderer()
     return nil
 end
 
+-- Find the Sheriff (player with gun)
 function FindSheriff()
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character then
             local humanoid = player.Character:FindFirstChild("Humanoid")
             if humanoid and humanoid.Health > 0 and HasGun(player) then
                 if WallCheckEnabled then
-                    if IsTargetVisible(player) then return player end
+                    if IsTargetVisible(player) then
+                        return player
+                    end
                 else
                     return player
                 end
@@ -231,6 +251,7 @@ function FindSheriff()
     return nil
 end
 
+-- Pick target based on TargetSheriff flag
 function FindTarget()
     if TargetSheriff then
         return FindSheriff()
@@ -239,8 +260,10 @@ function FindTarget()
     end
 end
 
+-- Get target position
 function GetTargetPosition(player)
     if not player or not player.Character then return nil end
+    
     if TargetPart == "Head" then
         local head = player.Character:FindFirstChild("Head")
         if head then return head.Position end
@@ -248,13 +271,16 @@ function GetTargetPosition(player)
         local hrp = player.Character:FindFirstChild("HumanoidRootPart")
         if hrp then return hrp.Position end
     end
+    
     return nil
 end
 
+-- Check if current target still has the required weapon
 local function IsValidTarget(player)
     if not player or not player.Character then return false end
     local hum = player.Character:FindFirstChild("Humanoid")
     if not hum or hum.Health <= 0 then return false end
+    
     if TargetSheriff then
         return HasGun(player)
     else
@@ -262,29 +288,37 @@ local function IsValidTarget(player)
     end
 end
 
--- Основной цикл
+-- Main loop
 RunService.RenderStepped:Connect(function()
     local inLobby = IsLocalInLobby()
-    if inLobby then return end
+    
+    if inLobby then
+        return
+    end
+    
     if not AimLockEnabled then return end
-
+    
     if WallCheckEnabled and TargetPlayer then
         if not IsTargetVisible(TargetPlayer) then
             TargetPlayer = nil
         end
     end
-
+    
     local validTarget = false
     if TargetPlayer and IsValidTarget(TargetPlayer) then
         if WallCheckEnabled then
-            if IsTargetVisible(TargetPlayer) then validTarget = true end
+            if IsTargetVisible(TargetPlayer) then
+                validTarget = true
+            end
         else
             validTarget = true
         end
     end
-
-    if not validTarget then TargetPlayer = FindTarget() end
-
+    
+    if not validTarget then
+        TargetPlayer = FindTarget()
+    end
+    
     if TargetPlayer then
         local targetPos = GetTargetPosition(TargetPlayer)
         if targetPos then
@@ -293,8 +327,9 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
+-- Reset target on respawn
 LocalPlayer.CharacterAdded:Connect(function()
     TargetPlayer = nil
 end)
 
-print("MM2 Aim Lock loaded. Toggle 'Target Sheriff' to aim at Sheriff.")
+print("Aim lock loaded")
