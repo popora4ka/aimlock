@@ -61,7 +61,7 @@ ToggleButton.MouseButton1Click:Connect(function()
 end)
 
 -- Credits
-my_section:AddLabel("Credits: anya_bts")
+my_section:AddLabel("Credits: @anya_bts")
 
 -- Description
 my_section:AddParagraph("aim lock", "have ideas/bugs? ping me")
@@ -332,4 +332,4 @@ LocalPlayer.CharacterAdded:Connect(function()
     TargetPlayer = nil
 end)
 
-print("Aim lock loaded")
+print("oh oh oh ohohohoho")
