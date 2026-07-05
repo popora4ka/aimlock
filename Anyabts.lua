@@ -1,6 +1,6 @@
 -- MM2 Murderer Aim Lock for Innocent/Sheriff
 local shared = odh_shared_plugins
-local my_section = shared.AddSection("I hate this error")
+local my_section = shared.AddSection("MM2 Aim Lock")
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -25,7 +25,7 @@ local UICorner = Instance.new("UICorner")
 local UIStroke = Instance.new("UIStroke")
 
 ScreenGui.Parent = game.CoreGui
-ScreenGui.Name = "anyabts_aimlock_gui"
+ScreenGui.Name = "MM2AimLockGUI"
 
 ToggleButton.Parent = ScreenGui
 ToggleButton.Size = UDim2.new(0, 70, 0, 70)
@@ -64,7 +64,7 @@ end)
 my_section:AddLabel("Credits: @anya_bts")
 
 -- Description
-my_section:AddParagraph("aim lock", "have ideas/bugs? ping me")
+my_section:AddParagraph("MM2 Aim Lock", "Aim lock for Innocent. Locks onto Murderer or Sheriff.")
 
 -- Toggle: Enable/Disable Aim Lock
 my_section:AddToggle("Enable Aim Lock", function(bool)
@@ -80,10 +80,10 @@ my_section:AddToggle("Enable Aim Lock", function(bool)
     end
 end)
 
--- Dropdown: Choose target role (Murderer or Sheriff)
-my_section:AddDropdown("Target Role", {"Murderer", "Sheriff"}, function(selected)
-    TargetSheriff = (selected == "Sheriff")
-    TargetPlayer = nil -- reset target when switching
+-- Toggle: Target Sheriff instead of Murderer
+my_section:AddToggle("Target Sheriff", function(bool)
+    TargetSheriff = bool
+    TargetPlayer = nil -- reset target
     if AimLockEnabled and not IsLocalInLobby() then
         TargetPlayer = FindTarget()
     end
@@ -332,4 +332,4 @@ LocalPlayer.CharacterAdded:Connect(function()
     TargetPlayer = nil
 end)
 
-print("oh oh oh ohohohoho")
+print("MM2 Aim Lock loaded. Round: Y 180-380. Toggle 'Target Sheriff' to aim at Sheriff.")
