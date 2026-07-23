@@ -288,30 +288,6 @@ local TargetVelocity = Vector3.zero
 local LastTargetPosition = nil
 local LastUpdateTime = 0
 
--- Burger stuff
-local BurgerEnabled = false
-local BurgerSound = nil
-local BurgerInitialized = false
-
--- Функция тряски экрана
-local function ShakeCamera(intensity, duration)
-    local startTime = tick()
-    
-    task.spawn(function()
-        while tick() - startTime < duration and BurgerEnabled do
-            local decay = 1 - ((tick() - startTime) / duration)
-            local offset = Vector3.new(
-                math.random(-100, 100) * intensity * decay / 100,
-                math.random(-100, 100) * intensity * decay / 100,
-                0
-            )
-            
-            Camera.CFrame = Camera.CFrame * CFrame.new(offset)
-            task.wait(0.01)
-        end
-    end)
-end
-
 -- Credits
 my_section:AddLabel("Credits: @anya_bts")
 
@@ -463,54 +439,6 @@ my_section:AddKeybind("Toggle Key", "T", function()
     end
 end)
 
--- Toggle: Burger. (very OP)
-my_section:AddToggle("Burger. (very OP)", function(bool)
-    if not BurgerInitialized then
-        BurgerInitialized = true
-        if bool then
-            BurgerEnabled = false
-            shared.Notify("Burger ready. Toggle to activate.", 2)
-        end
-        return
-    end
-    
-    BurgerEnabled = bool
-    
-    if bool then
-        local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
-        if playerGui then
-            if BurgerSound then
-                pcall(function() BurgerSound:Destroy() end)
-            end
-            
-            BurgerSound = Instance.new("Sound")
-            BurgerSound.SoundId = "rbxassetid://138522344746615"
-            BurgerSound.Volume = 1
-            BurgerSound.Looped = true
-            BurgerSound.Parent = playerGui
-            BurgerSound:Play()
-        end
-        
-        task.spawn(function()
-            while BurgerEnabled do
-                ShakeCamera(2, 0.3)
-                task.wait(0.1)
-            end
-        end)
-        
-        shared.Notify("🍔 BURGER MODE ACTIVATED 🍔", 3)
-    else
-        if BurgerSound then
-            pcall(function()
-                BurgerSound:Stop()
-                BurgerSound:Destroy()
-            end)
-            BurgerSound = nil
-        end
-        
-        shared.Notify("Burger mode deactivated :(", 2)
-    end
-end)
 
 -- ==================== FUNCTIONS ====================
 
