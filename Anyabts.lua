@@ -448,7 +448,7 @@ local function IsInRound()
     local root = char:FindFirstChild("HumanoidRootPart")
     if not root then return false end
     local y = root.Position.Y
-    return (y >= 110 and y <= 380)
+    return (y >= 90 and y <= 380)
 end
 
 local function IsVisible(targetChar)
